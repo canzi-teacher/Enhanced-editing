@@ -105,6 +105,12 @@ class MyPlugin extends obsidian.Plugin {
         this.loadSettings();
         this.footnoteStatusBar = this.addStatusBarItem();
         this.footnoteStatusBar.setText("");
+        
+        // 确保在布局准备好后再执行后续代码
+        this.app.workspace.onLayoutReady(() => {
+            this.初始化插件();
+        });
+        
         this.addCommand({
             id: 'set-mode',
             name: '切换模式',
@@ -1107,6 +1113,14 @@ class MyPlugin extends obsidian.Plugin {
         */
     };
 
+    初始化插件() {
+        // 其他初始化代码...
+        this.获取编辑器信息();
+        // 监听布局变化，以便在切换文件或窗格时更新编辑器信息
+        this.registerEvent(this.app.workspace.on('active-leaf-change', () => {
+            this.获取编辑器信息();
+        }));
+    }
 
 
     显示写作进度(){
@@ -1591,18 +1605,35 @@ class MyPlugin extends obsidian.Plugin {
 
     获取编辑模式() {
         let view = this.app.workspace.getActiveViewOfType(obsidian.MarkdownView);
-        if (!view){
-            //return;
-        };
-        //let cmEditor = view.sourceMode.cmEditor;
-        let cmEditor = view.editor;
-        return cmEditor;
-    };
-
+        if (!view || !view.editor) {
+            new obsidian.Notice("无法获取编辑器实例！");
+            return null;
+        }
+        // const mode = view.getMode(); // 从view对象获取编辑模式
+        // console.log('当前编辑模式：', mode);
+        return view.editor;
+    }
+    
     获取编辑器信息() {
-        //初始信息获取，最基本函数
-        编辑模式 = this.获取编辑模式 ();
-        if(编辑模式 == null){return;};
+        const activeView = this.app.workspace.getActiveViewOfType(obsidian.MarkdownView);
+        if (!activeView) {
+            // console.log('当前没有活动的 Markdown 视图');
+            return;
+        }
+        const editor = activeView.editor;
+        if (!editor) {
+            console.log('编辑器不可用');
+            return;
+        }
+        // 获取编辑模式等信息
+        编辑模式 = this.获取编辑模式(editor);
+        // 添加编辑模式检查
+        if (!编辑模式) {
+            return false;
+        }
+        当前文件 = this.app.workspace.getActiveFile();
+        当前文件路径 = 当前文件.path;
+        if(编辑模式 == null){return;}
         聚焦编辑 = 编辑模式.hasFocus();
         笔记全文 = 编辑模式.getDoc();   //此方法获取的笔记全文 是对象，不是文本
         //console.log("笔记全文\n"+笔记全文)
